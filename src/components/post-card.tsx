@@ -1,10 +1,9 @@
 
 import { useState } from "react";
-import { Share, MessageSquare, Link as LinkIcon, Copy as CopyIcon, MoreHorizontal, UserIcon } from "lucide-react";
+import { Heart, Share, Copy as CopyIcon, Facebook, Twitter, Linkedin, UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-
-// Add this import for comments and share actions
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { CommentSection } from "./comment-section";
 
 interface PostCardProps {
@@ -40,7 +39,7 @@ export function PostCard({
 }: PostCardProps) {
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(initialLikes);
-  const [showShare, setShowShare] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const postUrl = `${window.location.origin}/?post=${id}`;
 
   const handleLike = () => {
@@ -54,21 +53,19 @@ export function PostCard({
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(postUrl);
-    alert("Copied post link!"); // Keeping it simple; you may hook in with toast
+    alert("Copied post link!"); // (Optional: replace with toast)
+    setShareOpen(false);
   };
 
-  const handleNativeShare = () => {
-    if (navigator.share) {
-      navigator
-        .share({
-          title: `${author.name} on Next12`,
-          text: content,
-          url: postUrl,
-        })
-        .catch(() => {});
-    } else {
-      handleCopyLink();
-    }
+  // Social share URLs
+  const fbShare = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
+  const twitterShare = `https://twitter.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(content)}`;
+  const linkedinShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`;
+
+  // Util: Open social share in new tab
+  const openSocialShare = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+    setShareOpen(false);
   };
 
   return (
@@ -101,7 +98,9 @@ export function PostCard({
             </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-next12-gray">
-            <MoreHorizontal className="h-5 w-5" />
+            <span className="sr-only">More Options</span>
+            {/* Could add more menu options here if needed */}
+            ...
           </Button>
         </div>
         
@@ -127,26 +126,40 @@ export function PostCard({
               liked ? "text-next12-orange" : "text-next12-gray"
             )}
             onClick={handleLike}
+            aria-label={liked ? "Unlike post" : "Like post"}
           >
-            <Share className="h-5 w-5" />
+            <Heart fill={liked ? "#fe5b3e" : "none"} className="h-5 w-5 transition-colors" />
             <span>{likes}</span>
           </Button>
           
-          <Button variant="ghost" size="sm" className="flex items-center gap-1 text-next12-gray" onClick={() => setShowShare((v) => !v)}>
-            <MessageSquare className="h-5 w-5" />
-            <span>Share</span>
-          </Button>
-
-          {showShare && (
-            <div className="flex gap-2 items-center">
-              <Button variant="outline" size="icon" onClick={handleCopyLink} title="Copy link">
-                <CopyIcon className="w-4 h-4" />
+          <Popover open={shareOpen} onOpenChange={setShareOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="flex items-center gap-1 text-next12-gray">
+                <Share className="h-5 w-5" />
+                <span>Share</span>
               </Button>
-              <Button variant="outline" size="icon" onClick={handleNativeShare} title="Share">
-                <LinkIcon className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={handleCopyLink}>
+                  <CopyIcon className="w-4 h-4" />
+                  <span>Copy link</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(fbShare)}>
+                  <Facebook className="w-4 h-4 text-blue-600" />
+                  <span>Share to Facebook</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(twitterShare)}>
+                  <Twitter className="w-4 h-4 text-[#1da1f2]" />
+                  <span>Share to Twitter</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(linkedinShare)}>
+                  <Linkedin className="w-4 h-4 text-[#0a66c2]" />
+                  <span>Share to LinkedIn</span>
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         {/* Comments section */}
         {canComment && (
