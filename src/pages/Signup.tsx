@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
-import { IconMail, IconLock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -51,7 +51,7 @@ export default function Signup() {
             <label className="block mb-2 text-sm font-semibold tracking-wide text-[#483D5B]">Email</label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#EF400A]">
-                <IconMail size={18} />
+                <Mail size={18} />
               </span>
               <Input
                 autoFocus
@@ -68,7 +68,7 @@ export default function Signup() {
             <label className="block mb-2 text-sm font-semibold tracking-wide text-[#483D5B]">Password</label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#EF400A]">
-                <IconLock size={18} />
+                <Lock size={18} />
               </span>
               <Input
                 placeholder="Create a password"
