@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
 
-// BRAND: use the new brand graphic as visual focal point throughout
-// Glassmorphism and dark gradients for a luxury tech feel
-
+// Ultra-premium glassmorphic, dark gradient, brand look
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,30 +27,32 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative bg-gradient-to-tr from-[#100e23] via-[#1a162b] to-[#221e34] overflow-hidden">
-      {/* Decorative gradient glow */}
-      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-gradient-to-br from-[#EF400A]/60 via-[#04D5F5]/40 to-[#a03fff]/30 rounded-full blur-3xl opacity-60 pointer-events-none animate-fade-in" />
-      <div className="absolute hidden md:block right-0 top-0 w-2/5 h-full bg-gradient-to-b from-[#0e162b50] via-transparent to-[#ef400a08]" />
-      {/* Login panel */}
-      <div className="z-10 bg-white/10 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl px-8 py-12 w-full max-w-sm flex flex-col items-center gap-8 relative animate-scale-in transition-all duration-500">
-        {/* Branding */}
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0C021A] via-[#18082F] to-[#0f1015] overflow-hidden">
+      {/* Glowing animated brand gradient orbs */}
+      <div className="pointer-events-none absolute w-[600px] h-[600px] bg-gradient-to-br from-[#EF400A]/30 via-[#500096]/20 to-[#3CDDF5]/10 rounded-full blur-[120px] opacity-90 left-1/2 -translate-x-1/2 -top-60 animate-fade-in" />
+      <div className="pointer-events-none absolute w-[350px] h-[350px] bg-gradient-to-tr from-[#EF400A]/40 via-transparent to-[#a03fff]/20 rounded-full blur-[90px] opacity-90 right-4 top-12 animate-fade-in-slow" />
+      <div className="pointer-events-none absolute w-1/2 md:w-1/4 h-4/6 right-0 bottom-0 bg-gradient-to-tl from-transparent via-[#3cdff599]/20 to-[#100e23]/0 blur-2xl" />
+      {/* Glassmorphic panel */}
+      <div className="z-20 relative max-w-md w-full px-8 py-12 rounded-2xl border border-white/10 bg-white/5 shadow-[0_18px_60px_-10px_#EF400A33,0_2px_16px_-4px_#16121C88] backdrop-blur-2xl flex flex-col items-center gap-8 animate-scale-in">
+        {/* Logo/Brand */}
         <img
           src="/lovable-uploads/5653a923-64df-4a42-96c6-9b8ecf9b8ad4.png"
           alt="Next12 Logo"
-          className="mb-2 w-20 h-20 rounded-lg border-4 border-[#EF400A] bg-white/80 backdrop-blur-md shadow-lg"
+          className="w-20 h-20 mb-1 rounded-xl border-4 border-[#EF400A] shadow-lg glass-morphism"
+          draggable={false}
         />
-        <h2 className="text-3xl font-extrabold flex items-center gap-2 bg-gradient-to-r from-[#EF400A] via-white/90 to-[#1a162b] bg-clip-text text-transparent drop-shadow-sm">
-          <span className="text-[#fff]">next</span>
+        <h1 className="text-4xl font-extrabold tracking-wider flex items-center gap-2 bg-gradient-to-r from-[#fff] via-[#EF400A] to-[#4c4280] bg-clip-text text-transparent text-gradient drop-shadow-md select-none">
+          next
           <span className="text-[#EF400A]">12</span>
-        </h2>
+        </h1>
         {/* Login Form */}
-        <form className="w-full space-y-6" onSubmit={handleLogin}>
+        <form className="w-full space-y-7" onSubmit={handleLogin}>
           <div>
-            <label className="block mb-2 text-sm text-white font-semibold tracking-wide">Email</label>
+            <label className="block mb-2 text-sm font-semibold tracking-wide text-[#e5deff]">Email</label>
             <Input
               autoFocus
               placeholder="Email address"
-              className="bg-white/10 border border-[#2D2836] text-white placeholder-[#E5DEFF]/60 focus-visible:ring-2 focus-visible:ring-[#EF400A] transition"
+              className="bg-white/10 border border-[#332f50] text-white placeholder-[#E5DEFF]/70 focus-visible:ring-2 focus-visible:ring-[#EF400A] focus:bg-black/25 transition-all"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -60,10 +60,10 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm text-white font-semibold tracking-wide">Password</label>
+            <label className="block mb-2 text-sm font-semibold tracking-wide text-[#e5deff]">Password</label>
             <Input
               placeholder="••••••••"
-              className="bg-white/10 border border-[#2D2836] text-white placeholder-[#E5DEFF]/60 focus-visible:ring-2 focus-visible:ring-[#EF400A] transition"
+              className="bg-white/10 border border-[#332f50] text-white placeholder-[#E5DEFF]/60 focus-visible:ring-2 focus-visible:ring-[#EF400A] focus:bg-black/25 transition-all"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -72,20 +72,20 @@ export default function Login() {
             />
           </div>
           <Button
-            className="w-full bg-[#EF400A] hover:bg-[#fff] hover:text-[#EF400A] text-white font-bold tracking-wider text-lg rounded-xl py-2 transition-all duration-200 shadow-xl"
+            className="w-full bg-gradient-to-r from-[#EF400A] via-[#a03fff] to-[#04D5F5] hover:brightness-110 hover:scale-105 transition-all duration-200 text-white font-bold tracking-wider text-lg rounded-2xl py-2 shadow-xl"
             disabled={loading}
             type="submit"
           >
             {loading ? (
-              <span className="animate-pulse">Logging in...</span>
+              <span className="animate-pulse">Logging in…</span>
             ) : (
               "Log in"
             )}
           </Button>
         </form>
-        <div className="text-center text-sm text-[#E5DEFF]/90">
+        <div className="text-center text-sm text-[#E5DEFF]/80">
           Don&apos;t have an account?{" "}
-          <Link to="/signup" className="font-bold text-[#EF400A] hover:underline">
+          <Link to="/signup" className="font-bold text-[#EF400A] hover:underline hover:brightness-125 transition">
             Sign up
           </Link>
         </div>
