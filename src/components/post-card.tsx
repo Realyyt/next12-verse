@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Heart, Share, Copy as CopyIcon, Facebook, Twitter, Linkedin, UserIcon } from "lucide-react";
+import { Heart, Share, Copy as CopyIcon, Facebook, Twitter, Linkedin, UserIcon, Whatsapp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -61,6 +61,7 @@ export function PostCard({
   const fbShare = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
   const twitterShare = `https://twitter.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(content)}`;
   const linkedinShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`;
+  const whatsappShare = `https://wa.me/?text=${encodeURIComponent(content + " " + postUrl)}`;
 
   // Util: Open social share in new tab
   const openSocialShare = (url: string) => {
@@ -156,6 +157,10 @@ export function PostCard({
                 <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(linkedinShare)}>
                   <Linkedin className="w-4 h-4 text-[#0a66c2]" />
                   <span>Share to LinkedIn</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(whatsappShare)}>
+                  <Whatsapp className="w-4 h-4 text-green-500" />
+                  <span>Share to WhatsApp</span>
                 </Button>
               </div>
             </PopoverContent>
