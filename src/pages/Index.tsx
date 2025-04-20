@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
 import { PostCard } from "@/components/post-card";
 import { UserCard } from "@/components/user-card";
@@ -7,40 +6,121 @@ import { EventCard } from "@/components/event-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, User, Image as ImageIcon, MapPin as MapPinIcon, Calendar as CalendarIcon } from "lucide-react";
-import { CreatePostModal } from "@/components/CreatePostModal";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
-  // New: Modal open state
-  const [open, setOpen] = useState(false);
-
-  // Load posts
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const { user } = useAuthUser();
+  const [eventName, setEventName] = useState("");
+  const [location, setLocation] = useState("");
+  const [content, setContent] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Fetch posts from Supabase (recent first)
+  const handleImageSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleUpload = async (): Promise<string | null> => {
+    if (!imageFile) return null;
+    const fileExt = imageFile.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `${user?.email ?? "user"}/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from("post-images")
+      .upload(filePath, imageFile);
+
+    if (error) {
+      toast({ title: "Photo upload failed", description: error.message, variant: "destructive" });
+      return null;
+    }
+    const imageUrl = supabase.storage.from("post-images").getPublicUrl(filePath).data.publicUrl;
+    return imageUrl;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventName) {
+      toast({ title: "Event name is required", variant: "destructive" });
+      return;
+    }
+    if (!user) {
+      toast({ title: "You must be logged in", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    let imageUrl: string | null = null;
+
+    if (imageFile) {
+      imageUrl = await handleUpload();
+      if (!imageUrl) {
+        setLoading(false);
+        return;
+      }
+    }
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) {
+      toast({
+        title: "Authentication error",
+        description: "Could not retrieve user information",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("posts")
+      .insert({
+        user_id: authData.user.id,
+        event_name: eventName,
+        location,
+        content,
+        image_url: imageUrl,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: "Failed to create post", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
+    toast({ title: "Post created!" });
+    setEventName("");
+    setLocation("");
+    setContent("");
+    setImageFile(null);
+    setPosts((prev) => [data, ...prev]);
+    setLoading(false);
+  };
+
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+
   useEffect(() => {
     async function fetchPosts() {
-      setLoading(true);
+      setLoadingFeed(true);
       const { data, error } = await supabase
         .from("posts")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) {
-        // fallback to default
         setPosts([]);
       } else {
         setPosts(data ?? []);
       }
-      setLoading(false);
+      setLoadingFeed(false);
     }
     fetchPosts();
   }, []);
 
-  // Feed defaults (for demo fallback)
   const featuredPosts = [
     {
       id: "1",
@@ -126,28 +206,15 @@ const Index = () => {
     },
   ];
 
-  // Add handler to add new post to feed (no new fetch, just UI)
-  const handlePostCreated = (post: any) => {
-    setPosts((prev) => [post, ...prev]);
-  };
-
   return (
     <Layout>
-      {/* Create Post Modal */}
-      <CreatePostModal open={open} onOpenChange={setOpen} onPostCreated={handlePostCreated} />
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-6">
-        {/* Left sidebar - only on desktop */}
         <div className="hidden md:block">
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow p-4">
               <h2 className="text-lg font-bold text-next12-dark mb-4">Welcome to Next12</h2>
               <p className="text-next12-gray mb-4">Your community hub for next12.org residents. Connect with neighbors, join events, and stay updated.</p>
-              <Button className="w-full" onClick={() => setOpen(true)}>
-                Create Post
-              </Button>
             </div>
-            
             <div className="bg-white rounded-xl shadow p-4">
               <h2 className="text-lg font-bold text-next12-dark mb-4">Upcoming Events</h2>
               <div className="space-y-4">
@@ -159,43 +226,68 @@ const Index = () => {
             </div>
           </div>
         </div>
-        
-        {/* Main feed */}
+
         <div className="md:col-span-2">
-          <div className="bg-white rounded-xl shadow p-4 mb-6">
+          <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-4 mb-6 space-y-4">
             <div className="flex space-x-4">
               <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
                 <User className="h-5 w-5 text-next12-gray" />
               </div>
-              <div className="flex-1">
-                <Input placeholder="What's happening at Next12?" className="bg-gray-50" />
+              <div className="flex-1 space-y-2">
+                <Input
+                  placeholder="Event Name (e.g. Next12 Community BBQ)"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  required
+                  className="bg-gray-50"
+                  autoFocus
+                />
+                <Input
+                  placeholder="Location (e.g. Rooftop, Level 12)"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="bg-gray-50"
+                />
+                <Textarea
+                  rows={2}
+                  placeholder="What's happening at your event?"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="bg-gray-50"
+                />
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={handleImageSelect}>
+                    {imageFile ? "Change Photo" : "Upload Photo"}
+                  </Button>
+                  {imageFile && <span className="text-xs truncate">{imageFile.name}</span>}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+                {imageFile && (
+                  <div className="mt-2">
+                    <img
+                      src={URL.createObjectURL(imageFile)}
+                      alt="Preview"
+                      className="rounded-lg w-auto max-h-40"
+                    />
+                  </div>
+                )}
               </div>
-              <Button size="icon" variant="outline" aria-label="Create Post" onClick={() => setOpen(true)}>
-                <Plus className="h-5 w-5" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="submit" disabled={loading}>
+                {loading ? "Posting..." : "Post"}
               </Button>
             </div>
-            <div className="flex justify-between mt-4">
-              <Button variant="ghost" size="sm" className="text-next12-gray">
-                <ImageIcon className="h-5 w-5 mr-1" />
-                Photo
-              </Button>
-              <Button variant="ghost" size="sm" className="text-next12-gray">
-                <MapPinIcon className="h-5 w-5 mr-1" />
-                Location
-              </Button>
-              <Button variant="ghost" size="sm" className="text-next12-gray">
-                <CalendarIcon className="h-5 w-5 mr-1" />
-                Event
-              </Button>
-              <Button size="sm" onClick={() => setOpen(true)}>
-                Post
-              </Button>
-            </div>
-          </div>
+          </form>
           
           <div className="space-y-4">
-            {/* Show posts from Supabase (if any exist) or fallback to demo */}
-            {loading ? (
+            {loadingFeed ? (
               <div className="text-center text-next12-gray py-12">Loading posts…</div>
             ) : posts.length > 0 ? (
               posts.map((post) => (
