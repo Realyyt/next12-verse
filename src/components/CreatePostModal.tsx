@@ -69,10 +69,18 @@ export function CreatePostModal({ open, onOpenChange, onPostCreated }: CreatePos
       }
     }
 
+    // Get the current user's authentication information
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) {
+      toast({ title: "Authentication error", description: "Could not retrieve user information", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("posts")
       .insert({
-        user_id: user.id ?? user.email, // fallback for demo, prefer user_id; adjust if you use uuid in user
+        user_id: authData.user.id, // Use the actual UUID from auth
         event_name: eventName,
         location,
         content,
