@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { PostCard } from "@/components/post-card";
 import { UserCard } from "@/components/user-card";
@@ -6,8 +7,40 @@ import { EventCard } from "@/components/event-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, User, Image as ImageIcon, MapPin as MapPinIcon, Calendar as CalendarIcon } from "lucide-react";
+import { CreatePostModal } from "@/components/CreatePostModal";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 const Index = () => {
+  // New: Modal open state
+  const [open, setOpen] = useState(false);
+
+  // Load posts
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const { user } = useAuthUser();
+
+  // Fetch posts from Supabase (recent first)
+  useEffect(() => {
+    async function fetchPosts() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) {
+        // fallback to default
+        setPosts([]);
+      } else {
+        setPosts(data ?? []);
+      }
+      setLoading(false);
+    }
+    fetchPosts();
+  }, []);
+
+  // Feed defaults (for demo fallback)
   const featuredPosts = [
     {
       id: "1",
@@ -93,8 +126,16 @@ const Index = () => {
     },
   ];
 
+  // Add handler to add new post to feed (no new fetch, just UI)
+  const handlePostCreated = (post: any) => {
+    setPosts((prev) => [post, ...prev]);
+  };
+
   return (
     <Layout>
+      {/* Create Post Modal */}
+      <CreatePostModal open={open} onOpenChange={setOpen} onPostCreated={handlePostCreated} />
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-6">
         {/* Left sidebar - only on desktop */}
         <div className="hidden md:block">
@@ -102,7 +143,9 @@ const Index = () => {
             <div className="bg-white rounded-xl shadow p-4">
               <h2 className="text-lg font-bold text-next12-dark mb-4">Welcome to Next12</h2>
               <p className="text-next12-gray mb-4">Your community hub for next12.org residents. Connect with neighbors, join events, and stay updated.</p>
-              <Button className="w-full">Create Post</Button>
+              <Button className="w-full" onClick={() => setOpen(true)}>
+                Create Post
+              </Button>
             </div>
             
             <div className="bg-white rounded-xl shadow p-4">
@@ -127,6 +170,9 @@ const Index = () => {
               <div className="flex-1">
                 <Input placeholder="What's happening at Next12?" className="bg-gray-50" />
               </div>
+              <Button size="icon" variant="outline" aria-label="Create Post" onClick={() => setOpen(true)}>
+                <Plus className="h-5 w-5" />
+              </Button>
             </div>
             <div className="flex justify-between mt-4">
               <Button variant="ghost" size="sm" className="text-next12-gray">
@@ -141,14 +187,38 @@ const Index = () => {
                 <CalendarIcon className="h-5 w-5 mr-1" />
                 Event
               </Button>
-              <Button size="sm">Post</Button>
+              <Button size="sm" onClick={() => setOpen(true)}>
+                Post
+              </Button>
             </div>
           </div>
           
           <div className="space-y-4">
-            {featuredPosts.map(post => (
-              <PostCard key={post.id} {...post} />
-            ))}
+            {/* Show posts from Supabase (if any exist) or fallback to demo */}
+            {loading ? (
+              <div className="text-center text-next12-gray py-12">Loading posts…</div>
+            ) : posts.length > 0 ? (
+              posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  id={post.id}
+                  author={{
+                    id: post.user_id,
+                    name: post.event_name,
+                    username: post.user_id?.slice(0, 8) || "user",
+                  }}
+                  content={post.content || ""}
+                  timestamp={post.created_at ? new Date(post.created_at).toLocaleString() : ""}
+                  likes={0}
+                  comments={0}
+                  image={post.image_url}
+                />
+              ))
+            ) : (
+              featuredPosts.map((post) => (
+                <PostCard key={post.id} {...post} />
+              ))
+            )}
           </div>
         </div>
       </div>
