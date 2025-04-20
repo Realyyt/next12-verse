@@ -1,8 +1,11 @@
 
 import { useState } from "react";
-import { Heart, MessageSquare, Share2, MoreHorizontal, UserIcon } from "lucide-react";
+import { Share, MessageSquare, Link as LinkIcon, Copy as CopyIcon, MoreHorizontal, UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+
+// Add this import for comments and share actions
+import { CommentSection } from "./comment-section";
 
 interface PostCardProps {
   id: string;
@@ -19,6 +22,8 @@ interface PostCardProps {
   comments: number;
   image?: string;
   className?: string;
+  canComment?: boolean;
+  currentUserName?: string | null;
 }
 
 export function PostCard({
@@ -30,9 +35,13 @@ export function PostCard({
   comments,
   image,
   className,
+  canComment,
+  currentUserName,
 }: PostCardProps) {
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(initialLikes);
+  const [showShare, setShowShare] = useState(false);
+  const postUrl = `${window.location.origin}/?post=${id}`;
 
   const handleLike = () => {
     if (liked) {
@@ -41,6 +50,25 @@ export function PostCard({
       setLikes(likes + 1);
     }
     setLiked(!liked);
+  };
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(postUrl);
+    alert("Copied post link!"); // Keeping it simple; you may hook in with toast
+  };
+
+  const handleNativeShare = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `${author.name} on Next12`,
+          text: content,
+          url: postUrl,
+        })
+        .catch(() => {});
+    } else {
+      handleCopyLink();
+    }
   };
 
   return (
@@ -90,7 +118,7 @@ export function PostCard({
         )}
         
         {/* Actions */}
-        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+        <div className="flex justify-between items-center pt-2 border-t border-gray-100 gap-2 flex-wrap">
           <Button 
             variant="ghost" 
             size="sm" 
@@ -100,20 +128,30 @@ export function PostCard({
             )}
             onClick={handleLike}
           >
-            <Heart className="h-5 w-5" fill={liked ? "currentColor" : "none"} />
+            <Share className="h-5 w-5" />
             <span>{likes}</span>
           </Button>
           
-          <Button variant="ghost" size="sm" className="flex items-center gap-1 text-next12-gray">
+          <Button variant="ghost" size="sm" className="flex items-center gap-1 text-next12-gray" onClick={() => setShowShare((v) => !v)}>
             <MessageSquare className="h-5 w-5" />
-            <span>{comments}</span>
-          </Button>
-          
-          <Button variant="ghost" size="sm" className="flex items-center gap-1 text-next12-gray">
-            <Share2 className="h-5 w-5" />
             <span>Share</span>
           </Button>
+
+          {showShare && (
+            <div className="flex gap-2 items-center">
+              <Button variant="outline" size="icon" onClick={handleCopyLink} title="Copy link">
+                <CopyIcon className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={handleNativeShare} title="Share">
+                <LinkIcon className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
+        {/* Comments section */}
+        {canComment && (
+          <CommentSection postId={id} currentUserName={currentUserName ?? null} />
+        )}
       </div>
     </div>
   );

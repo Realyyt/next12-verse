@@ -304,11 +304,18 @@ const Index = () => {
                   likes={0}
                   comments={0}
                   image={post.image_url}
+                  canComment={true}
+                  currentUserName={user?.email ?? null}
                 />
               ))
             ) : (
               featuredPosts.map((post) => (
-                <PostCard key={post.id} {...post} />
+                <PostCard 
+                  key={post.id} 
+                  {...post} 
+                  canComment={false} 
+                  currentUserName={user?.email ?? null}
+                />
               ))
             )}
           </div>
