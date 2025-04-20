@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import { Home, Users, Calendar, Bell, User } from "lucide-react";
+import { UserMenu } from "@/components/UserMenu";
 
 export function NavigationBar() {
   const location = useLocation();
@@ -74,6 +74,9 @@ export function NavigationBar() {
             </span>
           </Link>
         ))}
+        <div className="ml-2">
+          <UserMenu />
+        </div>
       </div>
     </div>
   );
@@ -114,8 +117,9 @@ export function SideNavigation() {
 
   return (
     <div className="hidden md:flex h-screen fixed left-0 top-0 w-64 flex-col border-r border-gray-200 bg-white">
-      <div className="p-4">
+      <div className="p-4 flex justify-between items-center">
         <Logo variant="stacked" />
+        <UserMenu />
       </div>
       <div className="flex-1 px-3 py-4">
         <nav className="space-y-1">
