@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,8 @@ import { UserPlus, CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 // Possible notification structure
 interface Notification {
@@ -15,6 +18,7 @@ interface Notification {
   time: string;
   isRead: boolean;
   profileUrl: string;
+  senderId?: string; // sender of the friend request (for friend_requests)
 }
 
 interface Profile {
@@ -28,6 +32,8 @@ export default function Notifications() {
   const { user, loading } = useAuthUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const { toast } = useToast();
+  const [accepting, setAccepting] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchNotifications() {
@@ -69,7 +75,7 @@ export default function Notifications() {
       if (uniqueUserIds.length > 0) {
         const { data: usersData } = await supabase
           .from("profiles")
-          .select("id, name, username")
+          .select("id, name, username, avatar")
           .in("id", uniqueUserIds);
         if (usersData) {
           for (const p of usersData)
@@ -92,6 +98,7 @@ export default function Notifications() {
             time: new Date(req.created_at).toLocaleString(),
             isRead: false,
             profileUrl: `/profile/${sender.username}`,
+            senderId: req.user_id,
           });
         }
       }
@@ -116,6 +123,41 @@ export default function Notifications() {
     }
     fetchNotifications();
   }, [user]);
+
+  // Accept friend request handler
+  const handleAccept = async (connectionId: string) => {
+    setAccepting(connectionId);
+    // Patch connection.status to "accepted"
+    const { error } = await supabase
+      .from("connections")
+      .update({ status: "accepted" })
+      .eq("id", connectionId);
+    if (!error) {
+      setNotifications(prev =>
+        prev.map(n => {
+          if (n.id === connectionId)
+            return {
+              ...n,
+              type: "friend_accepted",
+              title: n.title.replace("sent you a friend request", "is now your connection!"),
+              isRead: true,
+            };
+          return n;
+        })
+      );
+      toast({
+        title: "Connection accepted",
+        description: "You are now connected!",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Could not accept the connection. Please try again.",
+        variant: "destructive",
+      });
+    }
+    setAccepting(null);
+  };
 
   return (
     <Layout title="Notifications">
@@ -151,12 +193,44 @@ export default function Notifications() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-medium text-next12-dark">{notification.title}</h3>
-                  {notification.description && (
-                    <p className="text-next12-gray text-sm mt-1">{notification.description}</p>
-                  )}
-                  <p className="text-next12-gray text-xs mt-1">{notification.time}</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-next12-dark">{notification.title}</h3>
+                      {notification.description && (
+                        <p className="text-next12-gray text-sm mt-1">{notification.description}</p>
+                      )}
+                      <p className="text-next12-gray text-xs mt-1">{notification.time}</p>
+                    </div>
+                    {(notification.type === "friend_request") && (
+                      <Button
+                        onClick={() => handleAccept(notification.id)}
+                        disabled={accepting === notification.id}
+                        size="sm"
+                        className="ml-4"
+                      >
+                        {accepting === notification.id ? (
+                          <>
+                            <CheckIcon className="h-4 w-4 mr-1 animate-spin" />
+                            Accepting...
+                          </>
+                        ) : (
+                          <>
+                            <CheckIcon className="h-4 w-4 mr-1" />
+                            Accept
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
+                <Link
+                  to={notification.profileUrl}
+                  className="ml-4 underline text-next12-orange text-sm hover:text-next12-orange/90"
+                  tabIndex={0}
+                  aria-label="View profile"
+                >
+                  View profile
+                </Link>
               </div>
             ))
           ) : (
@@ -173,3 +247,4 @@ export default function Notifications() {
     </Layout>
   );
 }
+
