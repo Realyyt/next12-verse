@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useChat } from "@/hooks/use-chat";
+import { supabase } from "@/lib/supabaseClient";
 
 interface UserCardProps {
   id: string;
@@ -49,10 +50,17 @@ export function UserCard({
 
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const { error } = await supabase.from("connections").insert({
+        user_id: user.id,
+        friend_id: id,
+        status: "pending"
+      });
       
-      // Update local state
+      if (error) {
+        console.error("Error creating connection:", error);
+        throw error;
+      }
+      
       setStatus("pending");
       toast({
         title: "Connection request sent",
@@ -70,7 +78,11 @@ export function UserCard({
   };
 
   const handleMessage = () => {
-    window.location.href = `/chat/${id}`;
+    if (openChat) {
+      openChat(id);
+    } else {
+      window.location.href = `/chat/${id}`;
+    }
   };
 
   return (

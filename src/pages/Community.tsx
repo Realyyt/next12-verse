@@ -35,27 +35,65 @@ const Community = () => {
   const [residents, setResidents] = useState<Profile[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load all profiles except self
   useEffect(() => {
     if (!user) return;
     setLoading(true);
+    setError(null);
 
-    Promise.all([
-      supabase.from("profiles").select("*").neq("id", user.id),
-      supabase.from("connections")
-         .select("*")
-         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-    ]).then(([profilesRes, connectionsRes]) => {
-      setResidents(profilesRes.data || []);
-      // Convert string status to the specific union type
-      const typedConnections = connectionsRes.data?.map(conn => ({
-        ...conn,
-        status: conn.status as "pending" | "accepted" | "rejected"
-      })) || [];
-      setConnections(typedConnections);
-      setLoading(false);
-    });
+    const fetchData = async () => {
+      try {
+        console.log("Fetching profiles and connections...");
+        
+        // Get profiles
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("*")
+          .neq("id", user.id);
+        
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+          setError("Failed to load residents");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Profiles fetched:", profilesData?.length || 0);
+        setResidents(profilesData || []);
+        
+        // Get connections
+        const { data: connectionsData, error: connectionsError } = await supabase
+          .from("connections")
+          .select("*")
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+        
+        if (connectionsError) {
+          console.error("Error fetching connections:", connectionsError);
+          setError("Failed to load connections");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Connections fetched:", connectionsData?.length || 0);
+        
+        // Convert string status to the specific union type
+        const typedConnections = connectionsData?.map(conn => ({
+          ...conn,
+          status: conn.status as "pending" | "accepted" | "rejected"
+        })) || [];
+        
+        setConnections(typedConnections);
+        setLoading(false);
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        setError("An unexpected error occurred");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [user]);
 
   // Compute residents with connectionStatus
@@ -129,17 +167,26 @@ const Community = () => {
           {/* ALL RESIDENTS TAB */}
           <TabsContent value="all" className="mt-0">
             <div className="bg-white rounded-xl p-4 md:p-6 shadow">
+              {error && (
+                <div className="text-red-500 p-4 mb-4 bg-red-50 rounded-lg">
+                  Error: {error}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loading ? <div>Loading...</div> :
+                {loading ? (
+                  <div className="col-span-full py-6 text-center text-next12-gray">
+                    Loading residents...
+                  </div>
+                ) : filteredResidents.length > 0 ? (
                   filteredResidents.map(resident => (
                     <UserCard key={resident.id} {...resident} />
-                  ))}
-                {!loading && filteredResidents.length === 0 && (
+                  ))
+                ) : (
                   <div className="col-span-full py-6 text-center text-next12-gray">
                     {searchTerm ? (
                       <p>No residents match your search criteria.</p>
                     ) : (
-                      <p>No residents to display.</p>
+                      <p>No other residents found. You might be the first one here!</p>
                     )}
                   </div>
                 )}
@@ -150,14 +197,18 @@ const Community = () => {
           <TabsContent value="connected" className="mt-0">
             <div className="bg-white rounded-xl p-4 md:p-6 shadow">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loading ? <div>Loading...</div> :
-                filteredResidents.map(resident => (
-                  <UserCard key={resident.id} {...resident} />
-                ))}
-                {!loading && filteredResidents.length === 0 && (
+                {loading ? (
+                  <div className="col-span-full py-6 text-center text-next12-gray">
+                    Loading connections...
+                  </div>
+                ) : filteredResidents.length > 0 ? (
+                  filteredResidents.map(resident => (
+                    <UserCard key={resident.id} {...resident} />
+                  ))
+                ) : (
                   <div className="col-span-full py-6 text-center text-next12-gray">
                     <p>You haven't connected with any residents yet.</p>
-                    <Button variant="outline" className="mt-2">
+                    <Button variant="outline" className="mt-2" onClick={() => setActiveFilter("all")}>
                       <UserPlus className="h-4 w-4 mr-2" />
                       Find Connections
                     </Button>
@@ -170,11 +221,15 @@ const Community = () => {
           <TabsContent value="pending" className="mt-0">
             <div className="bg-white rounded-xl p-4 md:p-6 shadow">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loading ? <div>Loading...</div> :
-                filteredResidents.map(resident => (
-                  <UserCard key={resident.id} {...resident} />
-                ))}
-                {!loading && filteredResidents.length === 0 && (
+                {loading ? (
+                  <div className="col-span-full py-6 text-center text-next12-gray">
+                    Loading pending requests...
+                  </div>
+                ) : filteredResidents.length > 0 ? (
+                  filteredResidents.map(resident => (
+                    <UserCard key={resident.id} {...resident} />
+                  ))
+                ) : (
                   <div className="col-span-full py-6 text-center text-next12-gray">
                     <p>No pending connection requests.</p>
                   </div>
