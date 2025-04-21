@@ -1,7 +1,11 @@
 
-import { UserIcon, MapPinIcon, BadgeCheckIcon } from "lucide-react";
+import { useState } from "react";
+import { UserIcon, MapPinIcon, BadgeCheckIcon, MessageCircle, UserPlus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { useChat } from "@/hooks/use-chat";
 
 interface UserCardProps {
   id: string;
@@ -28,6 +32,53 @@ export function UserCard({
   variant = "default",
   className,
 }: UserCardProps) {
+  const [status, setStatus] = useState(connectionStatus);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuthUser();
+  const { openChat } = useChat();
+
+  const handleConnect = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to connect with other residents",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update local state
+      setStatus("pending");
+      toast({
+        title: "Connection request sent",
+        description: `You've sent a connection request to ${name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send connection request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMessage = () => {
+    openChat({
+      id,
+      name,
+      username,
+      avatar
+    });
+  };
+
   return (
     <div 
       className={cn(
@@ -83,28 +134,63 @@ export function UserCard({
       
       {variant === "default" && (
         <div className="mt-4">
-          {connectionStatus === "none" && (
-            <Button className="w-full">Connect</Button>
+          {status === "none" && (
+            <Button 
+              className="w-full" 
+              onClick={handleConnect} 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Connect
+                </>
+              )}
+            </Button>
           )}
-          {connectionStatus === "pending" && (
-            <Button variant="outline" className="w-full">Pending</Button>
+          {status === "pending" && (
+            <Button variant="outline" className="w-full" disabled>
+              <Clock className="h-4 w-4 mr-2" />
+              Pending
+            </Button>
           )}
-          {connectionStatus === "connected" && (
-            <Button variant="outline" className="w-full">Message</Button>
+          {status === "connected" && (
+            <Button variant="outline" className="w-full" onClick={handleMessage}>
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Message
+            </Button>
           )}
         </div>
       )}
       
       {variant === "compact" && (
         <div className="ml-auto">
-          {connectionStatus === "none" && (
-            <Button size="sm">Connect</Button>
+          {status === "none" && (
+            <Button size="sm" onClick={handleConnect} disabled={isLoading}>
+              {isLoading ? (
+                <Clock className="h-4 w-4 animate-spin" />
+              ) : (
+                <UserPlus className="h-4 w-4 mr-1" />
+              )}
+              Connect
+            </Button>
           )}
-          {connectionStatus === "pending" && (
-            <Button variant="outline" size="sm">Pending</Button>
+          {status === "pending" && (
+            <Button variant="outline" size="sm" disabled>
+              <Clock className="h-4 w-4 mr-1" />
+              Pending
+            </Button>
           )}
-          {connectionStatus === "connected" && (
-            <Button variant="outline" size="sm">Message</Button>
+          {status === "connected" && (
+            <Button variant="outline" size="sm" onClick={handleMessage}>
+              <MessageCircle className="h-4 w-4 mr-1" />
+              Message
+            </Button>
           )}
         </div>
       )}

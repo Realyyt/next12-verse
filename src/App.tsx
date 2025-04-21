@@ -14,6 +14,7 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Logout from "./pages/Logout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ChatProvider } from "@/components/chat-provider";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <ChatProvider />
       <BrowserRouter>
         <Routes>
           {/* Public routes */}
