@@ -4,10 +4,11 @@ import { Layout } from "@/components/layout";
 import { UserCard } from "@/components/user-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, UserPlus } from "lucide-react";
+import { Search, Filter, UserPlus, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/hooks/use-toast";
 
 // Types for easier state
 type Profile = {
@@ -30,12 +31,23 @@ type Connection = {
 
 const Community = () => {
   const { user } = useAuthUser();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "connected" | "pending">("all");
   const [residents, setResidents] = useState<Profile[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Helper function to refresh the data
+  const refreshData = () => {
+    setRefreshTrigger(prev => prev + 1);
+    toast({
+      title: "Refreshing data",
+      description: "Loading the latest residents and connections..."
+    });
+  };
 
   // Load all profiles except self
   useEffect(() => {
@@ -65,6 +77,7 @@ const Community = () => {
           : [];
         
         console.log("Profiles fetched:", filteredProfiles.length);
+        console.log("Profile data:", filteredProfiles);
         setResidents(filteredProfiles);
         
         // Get connections
@@ -98,7 +111,7 @@ const Community = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, refreshTrigger]);
 
   // Compute residents with connectionStatus
   const filteredResidents = residents
@@ -159,6 +172,9 @@ const Community = () => {
             </div>
             <Button variant="outline" size="icon">
               <Filter className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={refreshData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
