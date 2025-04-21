@@ -1,153 +1,176 @@
 
+import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Calendar, Heart, MessageSquare, Bell, CheckIcon } from "lucide-react";
+import { UserPlus, CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { supabase } from "@/lib/supabaseClient";
 
-interface NotificationProps {
+// Possible notification structure
+interface Notification {
   id: string;
-  type: "connection" | "event" | "like" | "comment" | "announcement";
+  type: "friend_request" | "friend_accepted";
   title: string;
   description?: string;
   time: string;
   isRead: boolean;
-  actionUrl?: string;
+  profileUrl: string;
 }
 
-const NotificationItem = ({ notification }: { notification: NotificationProps }) => {
-  const getIcon = () => {
-    switch (notification.type) {
-      case "connection":
-        return <UserPlus className="h-5 w-5" />;
-      case "event":
-        return <Calendar className="h-5 w-5" />;
-      case "like":
-        return <Heart className="h-5 w-5" />;
-      case "comment":
-        return <MessageSquare className="h-5 w-5" />;
-      case "announcement":
-        return <Bell className="h-5 w-5" />;
+interface Profile {
+  id: string;
+  name: string;
+  username: string;
+  avatar?: string;
+}
+
+export default function Notifications() {
+  const { user, loading } = useAuthUser();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
+
+  useEffect(() => {
+    async function fetchNotifications() {
+      // Early return if auth isn't loaded yet
+      if (!user) {
+        setNotifications([]);
+        setLoadingNotifs(false);
+        return;
+      }
+      setLoadingNotifs(true);
+
+      // Get all connections where this user is involved
+      const [{ data: asFriend, error: error1 }, { data: asUser, error: error2 }] = await Promise.all([
+        supabase
+          .from("connections")
+          .select("*")
+          .eq("friend_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("connections")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (error1 || error2) {
+        setNotifications([]);
+        setLoadingNotifs(false);
+        return;
+      }
+      // Build notifications for: new received friend requests, and accepted friends where I'm the sender
+      // Get all involved user IDs
+      const allUserIds = [
+        ...(asFriend?.map(c => c.user_id) ?? []),
+        ...(asUser?.map(c => c.friend_id) ?? [])
+      ];
+      const uniqueUserIds = Array.from(new Set(allUserIds));
+      // Get profiles for all involved users
+      let profiles: Record<string, Profile> = {};
+      if (uniqueUserIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from("profiles")
+          .select("id, name, username")
+          .in("id", uniqueUserIds);
+        if (usersData) {
+          for (const p of usersData)
+            profiles[p.id] = p;
+        }
+      }
+
+      // Build notifications
+      const notifs: Notification[] = [];
+      // 1. Friend requests sent to me and still pending
+      for (const req of asFriend ?? []) {
+        if (req.status === "pending") {
+          const sender = profiles[req.user_id];
+          if (!sender) continue;
+          notifs.push({
+            id: req.id,
+            type: "friend_request",
+            title: `${sender.name} sent you a friend request`,
+            description: `@${sender.username}`,
+            time: new Date(req.created_at).toLocaleString(),
+            isRead: false,
+            profileUrl: `/profile/${sender.username}`,
+          });
+        }
+      }
+      // 2. Friend requests I sent and that were accepted
+      for (const req of asUser ?? []) {
+        if (req.status === "accepted") {
+          const friend = profiles[req.friend_id];
+          if (!friend) continue;
+          notifs.push({
+            id: req.id,
+            type: "friend_accepted",
+            title: `${friend.name} accepted your friend request`,
+            description: `@${friend.username}`,
+            time: new Date(req.created_at).toLocaleString(),
+            isRead: true,
+            profileUrl: `/profile/${friend.username}`,
+          });
+        }
+      }
+      setNotifications(notifs);
+      setLoadingNotifs(false);
     }
-  };
-
-  const getIconBackground = () => {
-    switch (notification.type) {
-      case "connection":
-        return "bg-blue-100 text-blue-500";
-      case "event":
-        return "bg-green-100 text-green-500";
-      case "like":
-        return "bg-pink-100 text-pink-500";
-      case "comment":
-        return "bg-purple-100 text-purple-500";
-      case "announcement":
-        return "bg-orange-100 text-orange-500";
-    }
-  };
-
-  return (
-    <div className={cn(
-      "flex items-start p-4 border-b border-gray-100",
-      !notification.isRead && "bg-next12-orange/5"
-    )}>
-      <div className={cn(
-        "h-10 w-10 rounded-full flex items-center justify-center mr-3",
-        getIconBackground()
-      )}>
-        {getIcon()}
-      </div>
-      
-      <div className="flex-1">
-        <h3 className="font-medium text-next12-dark">{notification.title}</h3>
-        {notification.description && (
-          <p className="text-next12-gray text-sm mt-1">{notification.description}</p>
-        )}
-        <p className="text-next12-gray text-xs mt-1">{notification.time}</p>
-      </div>
-      
-      <div className={cn(
-        "h-2 w-2 rounded-full",
-        notification.isRead ? "hidden" : "bg-next12-orange"
-      )} />
-    </div>
-  );
-};
-
-const Notifications = () => {
-  const notifications: NotificationProps[] = [
-    {
-      id: "1",
-      type: "announcement",
-      title: "Welcome to Next12 Zo World",
-      description: "We're excited to have you join our community platform!",
-      time: "Just now",
-      isRead: false,
-    },
-    {
-      id: "2",
-      type: "connection",
-      title: "Kristin Watson sent you a connection request",
-      time: "1 hour ago",
-      isRead: false,
-      actionUrl: "/profile/kristin",
-    },
-    {
-      id: "3",
-      type: "event",
-      title: "New event: Community Meetup",
-      description: "Happening tomorrow at 6:00 PM in the Main Lobby",
-      time: "2 hours ago",
-      isRead: false,
-      actionUrl: "/events",
-    },
-    {
-      id: "4",
-      type: "like",
-      title: "Jane Cooper liked your post",
-      time: "Yesterday",
-      isRead: true,
-      actionUrl: "/profile",
-    },
-    {
-      id: "5",
-      type: "comment",
-      title: "Wade Warren commented on your post",
-      description: "\"Great idea! I'd love to join the gardening initiative.\"",
-      time: "2 days ago",
-      isRead: true,
-      actionUrl: "/profile",
-    },
-  ];
+    fetchNotifications();
+  }, [user]);
 
   return (
     <Layout title="Notifications">
       <div className="py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-next12-dark">Notifications</h1>
-          <Button variant="outline" size="sm" className="flex items-center">
+          <Button variant="outline" size="sm" className="flex items-center" disabled>
             <CheckIcon className="h-4 w-4 mr-2" />
             Mark All as Read
           </Button>
         </div>
-        
         <div className="bg-white rounded-xl shadow overflow-hidden">
-          {notifications.length > 0 ? (
+          {loadingNotifs ? (
+            <div className="p-8 text-center text-next12-gray">Loading...</div>
+          ) : notifications.length > 0 ? (
             notifications.map(notification => (
-              <NotificationItem key={notification.id} notification={notification} />
+              <div
+                key={notification.id}
+                className={cn(
+                  "flex items-start p-4 border-b border-gray-100",
+                  !notification.isRead && "bg-next12-orange/5"
+                )}>
+                <div className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center mr-3",
+                  notification.type === "friend_accepted"
+                    ? "bg-green-100 text-green-500"
+                    : "bg-blue-100 text-blue-500"
+                )}>
+                  {notification.type === "friend_accepted" ? (
+                    <CheckIcon className="h-5 w-5" />
+                  ) : (
+                    <UserPlus className="h-5 w-5" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-next12-dark">{notification.title}</h3>
+                  {notification.description && (
+                    <p className="text-next12-gray text-sm mt-1">{notification.description}</p>
+                  )}
+                  <p className="text-next12-gray text-xs mt-1">{notification.time}</p>
+                </div>
+              </div>
             ))
           ) : (
             <div className="p-8 text-center">
               <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Bell className="h-8 w-8 text-next12-gray" />
+                <UserPlus className="h-8 w-8 text-next12-gray" />
               </div>
               <h3 className="text-lg font-semibold text-next12-dark mb-2">No Notifications</h3>
-              <p className="text-next12-gray mb-4">You're all caught up! Check back later for updates.</p>
+              <p className="text-next12-gray mb-4">You're all caught up! No friend activity yet.</p>
             </div>
           )}
         </div>
       </div>
     </Layout>
   );
-};
-
-export default Notifications;
+}
