@@ -33,6 +33,54 @@ export type Database = {
         }
         Relationships: []
       }
+      connections: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           content: string | null
@@ -60,6 +108,36 @@ export type Database = {
           image_url?: string | null
           location?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          bio: string | null
+          id: string
+          is_verified: boolean | null
+          location: string | null
+          name: string
+          username: string
+        }
+        Insert: {
+          avatar?: string | null
+          bio?: string | null
+          id: string
+          is_verified?: boolean | null
+          location?: string | null
+          name: string
+          username: string
+        }
+        Update: {
+          avatar?: string | null
+          bio?: string | null
+          id?: string
+          is_verified?: boolean | null
+          location?: string | null
+          name?: string
+          username?: string
         }
         Relationships: []
       }

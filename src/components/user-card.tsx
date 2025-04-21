@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { UserIcon, MapPinIcon, BadgeCheckIcon, MessageCircle, UserPlus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,12 +70,7 @@ export function UserCard({
   };
 
   const handleMessage = () => {
-    openChat({
-      id,
-      name,
-      username,
-      avatar
-    });
+    window.location.href = `/chat/${id}`;
   };
 
   return (

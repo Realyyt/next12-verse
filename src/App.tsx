@@ -14,8 +14,8 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Logout from "./pages/Logout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { ChatProvider } from "@/components/chat-provider";
-
+// import { ChatProvider } from "@/components/chat-provider";
+import ChatPage from "./pages/Chat";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -23,7 +23,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <ChatProvider />
+      {/* <ChatProvider /> */}
       <BrowserRouter>
         <Routes>
           {/* Public routes */}
@@ -69,6 +69,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:id"
+            element={
+              <ProtectedRoute>
+                <ChatPage />
               </ProtectedRoute>
             }
           />
