@@ -57,54 +57,45 @@ const Community = () => {
 
     const fetchData = async () => {
       try {
-        console.log("Fetching profiles and connections...");
-        
         // Get profiles
         const { data: profilesData, error: profilesError } = await supabase
           .from("profiles")
           .select("*");
-        
+
         if (profilesError) {
-          console.error("Error fetching profiles:", profilesError);
           setError("Failed to load residents");
           setLoading(false);
           return;
         }
-        
+
         // Filter out the current user if in the results
         const filteredProfiles = profilesData 
           ? profilesData.filter(profile => profile.id !== user.id)
           : [];
-        
-        console.log("Profiles fetched:", filteredProfiles.length);
-        console.log("Profile data:", filteredProfiles);
+
         setResidents(filteredProfiles);
-        
+
         // Get connections
         const { data: connectionsData, error: connectionsError } = await supabase
           .from("connections")
           .select("*")
           .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
-        
+
         if (connectionsError) {
-          console.error("Error fetching connections:", connectionsError);
           setError("Failed to load connections");
           setLoading(false);
           return;
         }
-        
-        console.log("Connections fetched:", connectionsData?.length || 0);
-        
-        // Convert string status to the specific union type
+
+        // Convert string status to specific union type
         const typedConnections = connectionsData?.map(conn => ({
           ...conn,
           status: conn.status as "pending" | "accepted" | "rejected"
         })) || [];
-        
+
         setConnections(typedConnections);
         setLoading(false);
       } catch (err) {
-        console.error("Unexpected error:", err);
         setError("An unexpected error occurred");
         setLoading(false);
       }
@@ -121,10 +112,10 @@ const Community = () => {
         c => (c.user_id === user?.id && c.friend_id === resident.id) ||
              (c.friend_id === user?.id && c.user_id === resident.id)
       );
-      
+
       // Determine connection status
       let connectionStatus: "none" | "pending" | "connected" = "none";
-      
+
       if (myConn) {
         if (myConn.status === "accepted") {
           connectionStatus = "connected";
@@ -132,7 +123,7 @@ const Community = () => {
           connectionStatus = "pending";
         }
       }
-      
+
       return {
         ...resident,
         isVerified: resident.is_verified || false,
@@ -140,7 +131,7 @@ const Community = () => {
       };
     })
     .filter(resident => {
-      // Main resident search filter
+      // Resident filtering by tab and search
       if (activeFilter === "connected" && resident.connectionStatus !== "connected") return false;
       if (activeFilter === "pending" && resident.connectionStatus !== "pending") return false;
       if (!searchTerm) return true;
@@ -221,10 +212,12 @@ const Community = () => {
                   <div className="col-span-full py-6 text-center text-next12-gray">
                     Loading connections...
                   </div>
-                ) : filteredResidents.length > 0 ? (
-                  filteredResidents.map(resident => (
-                    <UserCard key={resident.id} {...resident} />
-                  ))
+                ) : filteredResidents.filter(r => r.connectionStatus === "connected").length > 0 ? (
+                  filteredResidents
+                    .filter(r => r.connectionStatus === "connected")
+                    .map(resident => (
+                      <UserCard key={resident.id} {...resident} />
+                    ))
                 ) : (
                   <div className="col-span-full py-6 text-center text-next12-gray">
                     <p>You haven't connected with any residents yet.</p>
@@ -245,10 +238,12 @@ const Community = () => {
                   <div className="col-span-full py-6 text-center text-next12-gray">
                     Loading pending requests...
                   </div>
-                ) : filteredResidents.length > 0 ? (
-                  filteredResidents.map(resident => (
-                    <UserCard key={resident.id} {...resident} />
-                  ))
+                ) : filteredResidents.filter(r => r.connectionStatus === "pending").length > 0 ? (
+                  filteredResidents
+                    .filter(r => r.connectionStatus === "pending")
+                    .map(resident => (
+                      <UserCard key={resident.id} {...resident} />
+                    ))
                 ) : (
                   <div className="col-span-full py-6 text-center text-next12-gray">
                     <p>No pending connection requests.</p>
