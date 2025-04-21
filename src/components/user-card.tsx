@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { UserIcon, MapPinIcon, BadgeCheckIcon, MessageCircle, UserPlus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -78,6 +79,15 @@ export function UserCard({
   };
 
   const handleMessage = () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to send messages",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (openChat) {
       openChat(id);
     } else {

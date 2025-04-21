@@ -50,8 +50,7 @@ const Community = () => {
         // Get profiles
         const { data: profilesData, error: profilesError } = await supabase
           .from("profiles")
-          .select("*")
-          .neq("id", user.id);
+          .select("*");
         
         if (profilesError) {
           console.error("Error fetching profiles:", profilesError);
@@ -60,8 +59,13 @@ const Community = () => {
           return;
         }
         
-        console.log("Profiles fetched:", profilesData?.length || 0);
-        setResidents(profilesData || []);
+        // Filter out the current user if in the results
+        const filteredProfiles = profilesData 
+          ? profilesData.filter(profile => profile.id !== user.id)
+          : [];
+        
+        console.log("Profiles fetched:", filteredProfiles.length);
+        setResidents(filteredProfiles);
         
         // Get connections
         const { data: connectionsData, error: connectionsError } = await supabase
