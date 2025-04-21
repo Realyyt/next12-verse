@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
-import { Home, Users, Calendar, User, LogOut } from "lucide-react";
+import { Home, Users, Calendar, User, LogOut, Bell } from "lucide-react";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useNotificationCount } from "@/hooks/useNotificationCount";
 
@@ -33,7 +33,7 @@ export function SideNavigation() {
     {
       name: "Notifications",
       path: "/notifications",
-      icon: "bell", // to use only allowed icons!
+      icon: Bell, // Now using the imported Bell icon
       badge: notifications > 0 ? notifications : null,
     },
     {
@@ -49,10 +49,6 @@ export function SideNavigation() {
     navigate("/logout");
   };
 
-  // Import only allowed bell icon
-  // @ts-ignore
-  const { Bell } = require("lucide-react");
-
   return (
     <div className="hidden md:flex h-screen fixed left-0 top-0 w-64 flex-col border-r border-gray-200 bg-white">
       {/* Top: Logo */}
@@ -63,8 +59,7 @@ export function SideNavigation() {
         <nav className="space-y-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
-            // Use only the allowed bell icon
-            const Icon = item.name === "Notifications" ? Bell : item.icon;
+            const Icon = item.icon;
             return (
               <Link
                 key={item.name}
@@ -122,4 +117,3 @@ export function SideNavigation() {
     </div>
   );
 }
-
