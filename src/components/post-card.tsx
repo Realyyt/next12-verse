@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Heart, Share, Copy as CopyIcon, Facebook, Twitter, Linkedin, UserIcon, whatsapp } from "lucide-react";
+import { Heart, Share, Copy as CopyIcon, Facebook, Twitter, Linkedin, UserIcon, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -57,13 +56,11 @@ export function PostCard({
     setShareOpen(false);
   };
 
-  // Social share URLs
   const fbShare = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
   const twitterShare = `https://twitter.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(content)}`;
   const linkedinShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`;
   const whatsappShare = `https://wa.me/?text=${encodeURIComponent(content + " " + postUrl)}`;
 
-  // Util: Open social share in new tab
   const openSocialShare = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
     setShareOpen(false);
@@ -72,7 +69,6 @@ export function PostCard({
   return (
     <div className={cn("rounded-xl bg-white shadow", className)}>
       <div className="p-4">
-        {/* Author header */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden mr-3">
@@ -100,24 +96,20 @@ export function PostCard({
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-next12-gray">
             <span className="sr-only">More Options</span>
-            {/* Could add more menu options here if needed */}
             ...
           </Button>
         </div>
         
-        {/* Post content */}
         <div className="mb-3">
           <p className="text-next12-dark whitespace-pre-line">{content}</p>
         </div>
         
-        {/* Post image */}
         {image && (
           <div className="mb-3 rounded-lg overflow-hidden">
             <img src={image} alt="Post image" className="w-full h-auto" />
           </div>
         )}
         
-        {/* Actions */}
         <div className="flex justify-between items-center pt-2 border-t border-gray-100 gap-2 flex-wrap">
           <Button 
             variant="ghost" 
@@ -159,14 +151,13 @@ export function PostCard({
                   <span>Share to LinkedIn</span>
                 </Button>
                 <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(whatsappShare)}>
-                  <whatsapp className="w-4 h-4 text-green-500" />
+                  <MessageCircle className="w-4 h-4 text-green-500" />
                   <span>Share to WhatsApp</span>
                 </Button>
               </div>
             </PopoverContent>
           </Popover>
         </div>
-        {/* Comments section */}
         {canComment && (
           <CommentSection postId={id} currentUserName={currentUserName ?? null} />
         )}
@@ -174,4 +165,3 @@ export function PostCard({
     </div>
   );
 }
-
