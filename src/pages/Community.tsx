@@ -103,18 +103,22 @@ const Community = () => {
   // Compute residents with connectionStatus
   const filteredResidents = residents
     .map(resident => {
+      // Find connection between current user and this resident
       let myConn = connections.find(
         c => (c.user_id === user?.id && c.friend_id === resident.id) ||
              (c.friend_id === user?.id && c.user_id === resident.id)
       );
-      let connectionStatus: "none" | "pending" | "connected" =
-        !myConn
-          ? "none"
-          : myConn.status === "accepted"
-            ? "connected"
-            : myConn.status === "pending"
-              ? "pending"
-              : "none";
+      
+      // Determine connection status
+      let connectionStatus: "none" | "pending" | "connected" = "none";
+      
+      if (myConn) {
+        if (myConn.status === "accepted") {
+          connectionStatus = "connected";
+        } else if (myConn.status === "pending") {
+          connectionStatus = "pending";
+        }
+      }
       
       return {
         ...resident,
