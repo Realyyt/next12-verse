@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
-// Possible notification structure
 interface Notification {
   id: string;
   type: "friend_request" | "friend_accepted";
@@ -18,7 +16,7 @@ interface Notification {
   time: string;
   isRead: boolean;
   profileUrl: string;
-  senderId?: string; // sender of the friend request (for friend_requests)
+  senderId?: string;
 }
 
 interface Profile {
@@ -37,7 +35,6 @@ export default function Notifications() {
 
   useEffect(() => {
     async function fetchNotifications() {
-      // Early return if auth isn't loaded yet
       if (!user) {
         setNotifications([]);
         setLoadingNotifs(false);
@@ -45,7 +42,6 @@ export default function Notifications() {
       }
       setLoadingNotifs(true);
 
-      // Get all connections where this user is involved
       const [{ data: asFriend, error: error1 }, { data: asUser, error: error2 }] = await Promise.all([
         supabase
           .from("connections")
@@ -63,14 +59,13 @@ export default function Notifications() {
         setLoadingNotifs(false);
         return;
       }
-      // Build notifications for: new received friend requests, and accepted friends where I'm the sender
-      // Get all involved user IDs
+
       const allUserIds = [
         ...(asFriend?.map(c => c.user_id) ?? []),
         ...(asUser?.map(c => c.friend_id) ?? [])
       ];
       const uniqueUserIds = Array.from(new Set(allUserIds));
-      // Get profiles for all involved users
+
       let profiles: Record<string, Profile> = {};
       if (uniqueUserIds.length > 0) {
         const { data: usersData } = await supabase
@@ -83,9 +78,7 @@ export default function Notifications() {
         }
       }
 
-      // Build notifications
       const notifs: Notification[] = [];
-      // 1. Friend requests sent to me and still pending
       for (const req of asFriend ?? []) {
         if (req.status === "pending") {
           const sender = profiles[req.user_id];
@@ -102,7 +95,6 @@ export default function Notifications() {
           });
         }
       }
-      // 2. Friend requests I sent and that were accepted
       for (const req of asUser ?? []) {
         if (req.status === "accepted") {
           const friend = profiles[req.friend_id];
@@ -124,10 +116,8 @@ export default function Notifications() {
     fetchNotifications();
   }, [user]);
 
-  // Accept friend request handler
   const handleAccept = async (connectionId: string) => {
     setAccepting(connectionId);
-    // Patch connection.status to "accepted"
     const { error } = await supabase
       .from("connections")
       .update({ status: "accepted" })
@@ -169,7 +159,7 @@ export default function Notifications() {
             Mark All as Read
           </Button>
         </div>
-        <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-md overflow-hidden">
           {loadingNotifs ? (
             <div className="p-8 text-center text-next12-gray">Loading...</div>
           ) : notifications.length > 0 ? (
@@ -177,60 +167,78 @@ export default function Notifications() {
               <div
                 key={notification.id}
                 className={cn(
-                  "flex items-start p-4 border-b border-gray-100",
-                  !notification.isRead && "bg-next12-orange/5"
-                )}>
-                <div className={cn(
-                  "h-10 w-10 rounded-full flex items-center justify-center mr-3",
-                  notification.type === "friend_accepted"
-                    ? "bg-green-100 text-green-500"
-                    : "bg-blue-100 text-blue-500"
-                )}>
-                  {notification.type === "friend_accepted" ? (
-                    <CheckIcon className="h-5 w-5" />
-                  ) : (
-                    <UserPlus className="h-5 w-5" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-next12-dark">{notification.title}</h3>
-                      {notification.description && (
-                        <p className="text-next12-gray text-sm mt-1">{notification.description}</p>
-                      )}
-                      <p className="text-next12-gray text-xs mt-1">{notification.time}</p>
-                    </div>
-                    {(notification.type === "friend_request") && (
-                      <Button
-                        onClick={() => handleAccept(notification.id)}
-                        disabled={accepting === notification.id}
-                        size="sm"
-                        className="ml-4"
-                      >
-                        {accepting === notification.id ? (
-                          <>
-                            <CheckIcon className="h-4 w-4 mr-1 animate-spin" />
-                            Accepting...
-                          </>
-                        ) : (
-                          <>
-                            <CheckIcon className="h-4 w-4 mr-1" />
-                            Accept
-                          </>
-                        )}
-                      </Button>
+                  "flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 p-6 border-b last:border-b-0",
+                  "bg-white transition-all duration-150",
+                  !notification.isRead && "bg-[#FFF8F4] shadow-[0_4px_32px_0_rgba(255,120,61,0.05)]"
+                )}
+                tabIndex={0}
+                aria-label={notification.title}
+                style={{ borderRadius: '1.25rem' }}
+              >
+                <div className="flex flex-row items-center flex-1 min-w-0">
+                  <div
+                    className={cn(
+                      "flex items-center justify-center h-14 w-14 rounded-full mr-5 flex-shrink-0",
+                      notification.type === "friend_accepted"
+                        ? "bg-green-100 text-green-500"
+                        : "bg-blue-100 text-blue-500"
+                    )}
+                    aria-hidden="true"
+                  >
+                    {notification.type === "friend_accepted" ? (
+                      <CheckIcon className="h-7 w-7" />
+                    ) : (
+                      <UserPlus className="h-7 w-7" />
                     )}
                   </div>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span className="font-bold text-next12-dark text-lg leading-snug break-words">
+                      {notification.title}
+                    </span>
+                    {notification.description && (
+                      <span className="text-next12-gray text-base">{notification.description}</span>
+                    )}
+                    <span className="text-next12-gray text-xs mt-1">{notification.time}</span>
+                  </div>
                 </div>
-                <Link
-                  to={notification.profileUrl}
-                  className="ml-4 underline text-next12-orange text-sm hover:text-next12-orange/90"
-                  tabIndex={0}
-                  aria-label="View profile"
-                >
-                  View profile
-                </Link>
+                <div className="flex flex-col sm:flex-row items-center gap-3 flex-shrink-0 mt-4 sm:mt-0">
+                  {notification.type === "friend_request" && (
+                    <Button
+                      onClick={() => handleAccept(notification.id)}
+                      disabled={accepting === notification.id}
+                      size="lg"
+                      className={cn(
+                        "px-8 py-3 text-base font-semibold rounded-xl shadow-none bg-next12-orange hover:bg-next12-orange/90 focus:ring-2 focus:ring-offset-2 focus:ring-orange-200 focus:outline-none transition-all",
+                        accepting === notification.id && "opacity-70"
+                      )}
+                      aria-label={`Accept friend request from ${notification.description}`}
+                    >
+                      {accepting === notification.id ? (
+                        <>
+                          <CheckIcon className="h-5 w-5 mr-2 animate-spin" />
+                          Accepting...
+                        </>
+                      ) : (
+                        <>
+                          <CheckIcon className="h-5 w-5 mr-2" />
+                          Accept
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  <Link
+                    to={notification.profileUrl}
+                    className={cn(
+                      "text-next12-orange font-semibold underline underline-offset-2 hover:text-next12-orange/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 px-2 py-1 -mx-2 transition",
+                      "text-base"
+                    )}
+                    tabIndex={0}
+                    aria-label="View profile"
+                    style={{ minWidth: 120, textAlign: 'right' }}
+                  >
+                    View profile
+                  </Link>
+                </div>
               </div>
             ))
           ) : (
@@ -247,4 +255,3 @@ export default function Notifications() {
     </Layout>
   );
 }
-
