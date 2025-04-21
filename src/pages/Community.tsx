@@ -115,11 +115,7 @@ const Community = () => {
             : myConn.status === "pending"
               ? "pending"
               : "none";
-      // Pending: currentUser sent request and it's still pending
-      if (connectionStatus === "pending" && myConn?.friend_id === user?.id) {
-        // Incoming pending - treat as "none"/can accept? Up to you.
-        connectionStatus = "pending";
-      }
+      
       return {
         ...resident,
         isVerified: resident.is_verified || false,
