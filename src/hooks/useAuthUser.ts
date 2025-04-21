@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export function useAuthUser() {
-  const [user, setUser] = useState<null | { email: string }>(null);
+  const [user, setUser] = useState<null | { email: string; id: string }>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,7 +12,7 @@ export function useAuthUser() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      setUser(user ? { email: user.email } : null);
+      setUser(user ? { email: user.email!, id: user.id } : null);
       setLoading(false);
     };
     getUser();

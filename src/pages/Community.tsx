@@ -25,6 +25,7 @@ type Connection = {
   user_id: string;
   friend_id: string;
   status: "pending" | "accepted" | "rejected";
+  created_at: string;
 };
 
 const Community = () => {
@@ -47,7 +48,12 @@ const Community = () => {
          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
     ]).then(([profilesRes, connectionsRes]) => {
       setResidents(profilesRes.data || []);
-      setConnections(connectionsRes.data || []);
+      // Convert string status to the specific union type
+      const typedConnections = connectionsRes.data?.map(conn => ({
+        ...conn,
+        status: conn.status as "pending" | "accepted" | "rejected"
+      })) || [];
+      setConnections(typedConnections);
       setLoading(false);
     });
   }, [user]);

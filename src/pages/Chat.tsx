@@ -44,7 +44,7 @@ export default function ChatPage() {
 
   // Get my profile
   useEffect(() => {
-    if (user?.email) {
+    if (user?.id) {
       supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
         setMyProfile(data);
       });
