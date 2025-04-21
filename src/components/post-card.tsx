@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Heart, Share, Copy as CopyIcon, Facebook, Twitter, Linkedin, UserIcon, Whatsapp } from "lucide-react";
+import { Heart, Share, Copy as CopyIcon, Facebook, Twitter, Linkedin, UserIcon, whatsapp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -159,7 +159,7 @@ export function PostCard({
                   <span>Share to LinkedIn</span>
                 </Button>
                 <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(whatsappShare)}>
-                  <Whatsapp className="w-4 h-4 text-green-500" />
+                  <whatsapp className="w-4 h-4 text-green-500" />
                   <span>Share to WhatsApp</span>
                 </Button>
               </div>
