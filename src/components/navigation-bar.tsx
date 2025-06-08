@@ -1,11 +1,11 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
-import { Home, Users, Calendar, User, LogOut, Bell } from "lucide-react";
+import { Home, Users, Calendar, User, LogOut, Bell, Shield } from "lucide-react";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useNotificationCount } from "@/hooks/useNotificationCount";
+import { isAdmin } from "@/lib/supabaseClient";
 
 // Only SideNavigation is used.
 export function SideNavigation() {
@@ -13,6 +13,13 @@ export function SideNavigation() {
   const navigate = useNavigate();
   const { user } = useAuthUser();
   const notifications = useNotificationCount();
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      isAdmin(user.id).then(setIsAdminUser);
+    }
+  }, [user]);
 
   const navItems = [
     {
@@ -42,6 +49,14 @@ export function SideNavigation() {
       icon: User,
     },
   ];
+
+  if (isAdminUser) {
+    navItems.push({
+      name: "Admin Dashboard",
+      path: "/admin",
+      icon: Shield,
+    });
+  }
 
   // Handle logout (redirect to /logout)
   const handleLogout = (e: React.MouseEvent) => {

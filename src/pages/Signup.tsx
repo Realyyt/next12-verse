@@ -1,28 +1,30 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabaseClient";
-import { Mail, Lock } from "lucide-react";
+import { signUp } from "@/lib/auth";
+import { Mail, Lock, User, UserCircle } from "lucide-react";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({ email, password });
-    setLoading(false);
-    if (error) {
-      toast({ title: "Signup failed", description: error.message });
-    } else {
+    try {
+      await signUp({ email, password, fullName, username });
       toast({ title: "Welcome!", description: "Check your email for confirmation." });
       navigate("/login");
+    } catch (error: any) {
+      toast({ title: "Signup failed", description: error.message });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -48,13 +50,45 @@ export default function Signup() {
         {/* Signup Form */}
         <form className="w-full space-y-8" onSubmit={handleSignup}>
           <div>
+            <label className="block mb-2 text-sm font-semibold tracking-wide text-[#483D5B]">Full Name</label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#EF400A]">
+                <UserCircle size={18} />
+              </span>
+              <Input
+                autoFocus
+                placeholder="Enter your full name"
+                className="pl-10 bg-white/40 border border-[#f2dbfa] text-zinc-700 placeholder-[#ac79e3]/60 focus-visible:ring-2 focus-visible:ring-[#EF400A] focus:bg-white/70 transition-all"
+                type="text"
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-semibold tracking-wide text-[#483D5B]">Username</label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#EF400A]">
+                <User size={18} />
+              </span>
+              <Input
+                placeholder="Choose a username"
+                className="pl-10 bg-white/40 border border-[#f2dbfa] text-zinc-700 placeholder-[#ac79e3]/60 focus-visible:ring-2 focus-visible:ring-[#EF400A] focus:bg-white/70 transition-all"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div>
             <label className="block mb-2 text-sm font-semibold tracking-wide text-[#483D5B]">Email</label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#EF400A]">
                 <Mail size={18} />
               </span>
               <Input
-                autoFocus
                 placeholder="Email address"
                 className="pl-10 bg-white/40 border border-[#f2dbfa] text-zinc-700 placeholder-[#ac79e3]/60 focus-visible:ring-2 focus-visible:ring-[#EF400A] focus:bg-white/70 transition-all"
                 type="email"

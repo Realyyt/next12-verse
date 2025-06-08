@@ -1,12 +1,11 @@
-
 import { useState } from "react";
 import { UserIcon, MapPinIcon, BadgeCheckIcon, MessageCircle, UserPlus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { useChat } from "@/hooks/use-chat";
 import { supabase } from "@/lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 interface UserCardProps {
   id: string;
@@ -37,7 +36,7 @@ export function UserCard({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuthUser();
-  const { openChat } = useChat();
+  const navigate = useNavigate();
 
   const handleConnect = async () => {
     if (!user) {
@@ -88,16 +87,7 @@ export function UserCard({
       return;
     }
     
-    if (openChat) {
-      openChat({
-        id: id,
-        name: name,
-        username: username,
-        avatar: avatar
-      });
-    } else {
-      window.location.href = `/chat/${id}`;
-    }
+    navigate(`/chat-with-calls/${id}`);
   };
 
   return (

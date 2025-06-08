@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,14 +36,14 @@ export function CreatePostModal({ open, onOpenChange, onPostCreated }: CreatePos
     const filePath = `${user?.email ?? "user"}/${fileName}`;
 
     const { data, error } = await supabase.storage
-      .from("post-images")
+      .from("posts")
       .upload(filePath, imageFile);
 
     if (error) {
       toast({ title: "Photo upload failed", description: error.message, variant: "destructive" });
       return null;
     }
-    const imageUrl = supabase.storage.from("post-images").getPublicUrl(filePath).data.publicUrl;
+    const imageUrl = supabase.storage.from("posts").getPublicUrl(filePath).data.publicUrl;
     return imageUrl;
   };
 

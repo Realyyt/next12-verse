@@ -15,10 +15,10 @@ import { faUsers, faCalendar, faBell, faUser } from '@fortawesome/free-solid-svg
 
 const Index = () => {
   const { user } = useAuthUser();
-  const [eventName, setEventName] = useState("");
-  const [location, setLocation] = useState("");
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
   const [content, setContent] = useState("");
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef(null);
@@ -26,69 +26,85 @@ const Index = () => {
   // Sidebar toggle state
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Example event images (replace with your own URLs or storage)
-  const [upcomingEvents, setUpcomingEvents] = useState([
-    {
-      id: "1",
-      title: "Community BBQ",
-      description: "Neighborhood cookout",
-      attendees: 10,
-      date: "2023-10-15",
-      location: "Rooftop",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80"
-    },
-    {
-      id: "3",
-      title: "Movie Night",
-      description: "Outdoor screening",
-      attendees: 15,
-      date: "2023-10-25",
-      location: "Courtyard",
-      image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80"
-    }
-  ]);
-
-  const [suggestedUsers, setSuggestedUsers] = useState([
-    { id: "1", name: "User 1", username: "user1" },
-    { id: "2", name: "User 2", username: "user2" }
-  ]);
-
-  const [featuredPosts, setFeaturedPosts] = useState([
-    {
-      id: "1",
-      title: "Featured Post 1",
-      content: "Content 1",
-      author: { id: "1", name: "Author 1", username: "author1" },
-      timestamp: "2023-10-15",
-      likes: 10,
-      comments: 5
-    },
-    {
-      id: "2",
-      title: "Featured Post 2",
-      content: "Content 2",
-      author: { id: "2", name: "Author 2", username: "author2" },
-      timestamp: "2023-10-20",
-      likes: 20,
-      comments: 15
-    }
-  ]);
-
-  const [posts, setPosts] = useState([]);
-  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   useEffect(() => {
-    async function fetchPosts() {
-      setLoadingFeed(true);
+    fetchUpcomingEvents();
+    fetchPosts();
+  }, [user?.id]);
+
+  const fetchUpcomingEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          *,
+          attendees_count:event_registrations(count)
+        `)
+        .eq("status", "published")
+        .gte("date", new Date().toISOString().split('T')[0])
+        .order("date", { ascending: true })
+        .limit(3);
+
+      if (error) throw error;
+
+      setUpcomingEvents(data || []);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      toast({
+        title: "Error loading events",
+        description: "Failed to load upcoming events. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  const fetchPosts = async () => {
+    try {
       const { data, error } = await supabase
         .from("posts")
-        .select("*")
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            name,
+            username,
+            avatar,
+            is_verified
+          ),
+          post_likes!left(user_id)
+        `)
         .order("created_at", { ascending: false });
-      setPosts(error ? [] : data ?? []);
+
+      if (error) throw error;
+
+      const transformedData = data.map(post => ({
+        ...post,
+        profiles: post.profiles || {
+          id: post.user_id,
+          name: 'Unknown User',
+          username: 'unknown',
+          avatar: null,
+          is_verified: false
+        },
+        liked: user?.id ? post.post_likes?.some(like => like.user_id === user.id) : false
+      }));
+
+      setPosts(transformedData);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      toast({
+        title: "Error loading posts",
+        description: "Please try refreshing the page",
+        variant: "destructive",
+      });
+    } finally {
       setLoadingFeed(false);
     }
-    fetchPosts();
-  }, []);
+  };
 
   const handleImageSelect = () => fileInputRef.current?.click();
 
@@ -99,21 +115,21 @@ const Index = () => {
     const filePath = `${user?.email ?? "user"}/${fileName}`;
 
     const { error } = await supabase.storage
-      .from("post-images")
+      .from("posts")
       .upload(filePath, imageFile);
 
     if (error) {
       toast({ title: "Photo upload failed", description: error.message, variant: "destructive" });
       return null;
     }
-    const imageUrl = supabase.storage.from("post-images").getPublicUrl(filePath).data.publicUrl;
+    const imageUrl = supabase.storage.from("posts").getPublicUrl(filePath).data.publicUrl;
     return imageUrl;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!eventName) {
-      toast({ title: "Event name is required", variant: "destructive" });
+    if (!content.trim()) {
+      toast({ title: "Post content is required", variant: "destructive" });
       return;
     }
     if (!user) {
@@ -130,6 +146,7 @@ const Index = () => {
         return;
       }
     }
+
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) {
       toast({
@@ -145,12 +162,21 @@ const Index = () => {
       .from("posts")
       .insert({
         user_id: authData.user.id,
-        event_name: eventName,
-        location,
         content,
         image_url: imageUrl,
+        likes_count: 0,
+        comments_count: 0
       })
-      .select()
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          name,
+          username,
+          avatar,
+          is_verified
+        )
+      `)
       .single();
 
     if (error) {
@@ -159,25 +185,41 @@ const Index = () => {
       return;
     }
     toast({ title: "Post created!" });
-    setEventName("");
-    setLocation("");
     setContent("");
     setImageFile(null);
     setPosts((prev) => [data, ...prev]);
     setLoading(false);
   };
 
+  const handleLikeToggle = () => {
+    fetchPosts(); // Refresh posts to get updated like counts
+  };
+
   // Horizontal scrollable events component
   const HorizontalEvents = () => (
     <div className="bg-white rounded-xl shadow p-4 mb-6">
       <h2 className="text-lg font-bold text-next12-dark mb-4">Upcoming Events</h2>
-      <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
-        {upcomingEvents.map(event => (
-          <div key={event.id} className="flex-shrink-0 w-64">
-            <EventCard {...event} image={event.image} />
-          </div>
-        ))}
-      </div>
+      {loadingEvents ? (
+        <div className="text-center py-4">Loading events...</div>
+      ) : upcomingEvents.length === 0 ? (
+        <div className="text-center py-4 text-next12-gray">No upcoming events found</div>
+      ) : (
+        <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
+          {upcomingEvents.map(event => (
+            <div key={event.id} className="flex-shrink-0 w-64">
+              <EventCard
+                id={event.id}
+                title={event.title}
+                description={event.description}
+                date={new Date(event.date).toLocaleDateString()}
+                location={event.location}
+                attendees={event.attendees_count?.count ?? 0}
+                image={event.image_url || undefined}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -201,12 +243,27 @@ const Index = () => {
         {/* Only show events in sidebar on desktop */}
         <div className="hidden md:block bg-white rounded-xl shadow p-4">
           <h2 className="text-lg font-bold text-next12-dark mb-4">Upcoming Events</h2>
-          <div className="space-y-4">
-            {upcomingEvents.map(event => (
-              <EventCard key={event.id} {...event} image={event.image} />
-            ))}
-            <Button variant="outline" className="w-full">View All Events</Button>
-          </div>
+          {loadingEvents ? (
+            <div className="text-center py-4">Loading events...</div>
+          ) : upcomingEvents.length === 0 ? (
+            <div className="text-center py-4 text-next12-gray">No upcoming events found</div>
+          ) : (
+            <div className="space-y-4">
+              {upcomingEvents.map(event => (
+                <EventCard
+                  key={event.id}
+                  id={event.id}
+                  title={event.title}
+                  description={event.description}
+                  date={new Date(event.date).toLocaleDateString()}
+                  location={event.location}
+                  attendees={event.attendees_count?.count ?? 0}
+                  image={event.image_url || undefined}
+                />
+              ))}
+              <Button variant="outline" className="w-full">View All Events</Button>
+            </div>
+          )}
         </div>
         <div className="flex flex-col space-y-4">
           <a href="/community" className="flex items-center px-4 py-2 text-next12-dark hover:text-next12-primary hover:bg-next12-light rounded">
@@ -267,26 +324,13 @@ const Index = () => {
                 <User className="h-5 w-5 text-next12-gray" />
               </div>
               <div className="flex-1 space-y-2">
-                <Input
-                  placeholder="Event Name (e.g. Next12 Community BBQ)"
-                  value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
-                  required
-                  className="bg-gray-50"
-                  autoFocus
-                />
-                <Input
-                  placeholder="Location (e.g. Rooftop, Level 12)"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="bg-gray-50"
-                />
                 <Textarea
-                  rows={2}
-                  placeholder="What's happening at your event?"
+                  rows={3}
+                  placeholder="What's on your mind?"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="bg-gray-50"
+                  required
                 />
                 <div className="flex items-center gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={handleImageSelect}>
@@ -330,27 +374,24 @@ const Index = () => {
                   id={post.id}
                   author={{
                     id: post.user_id,
-                    name: post.event_name,
-                    username: post.user_id?.slice(0, 8) || "user",
+                    name: post.profiles.name,
+                    username: post.profiles.username,
+                    avatar: post.profiles.avatar,
+                    isVerified: post.profiles.is_verified
                   }}
                   content={post.content || ""}
                   timestamp={post.created_at ? new Date(post.created_at).toLocaleString() : ""}
-                  likes={0}
-                  comments={0}
+                  likes={post.likes_count}
+                  comments={post.comments_count}
                   image={post.image_url}
                   canComment={true}
                   currentUserName={user?.email ?? null}
+                  liked={post.liked}
+                  onLikeToggle={handleLikeToggle}
                 />
               ))
             ) : (
-              featuredPosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  {...post}
-                  canComment={false}
-                  currentUserName={user?.email ?? null}
-                />
-              ))
+              <div className="text-center text-next12-gray py-12">No posts yet. Be the first to post!</div>
             )}
           </div>
         </div>

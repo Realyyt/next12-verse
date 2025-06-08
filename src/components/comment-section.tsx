@@ -1,27 +1,32 @@
-
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 interface Comment {
   id: string;
-  author_name: string;
   content: string;
   created_at: string;
+  user_id: string;
+  profiles: {
+    name: string;
+    username: string;
+    avatar: string | null;
+  };
 }
 
 interface CommentSectionProps {
   postId: string;
-  currentUserName: string | null;
 }
 
-export function CommentSection({ postId, currentUserName }: CommentSectionProps) {
+export function CommentSection({ postId }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuthUser();
 
   useEffect(() => {
     fetchComments();
@@ -32,7 +37,14 @@ export function CommentSection({ postId, currentUserName }: CommentSectionProps)
     setLoading(true);
     const { data, error } = await supabase
       .from("comments")
-      .select("*")
+      .select(`
+        *,
+        profiles!user_id (
+          name,
+          username,
+          avatar
+        )
+      `)
       .eq("post_id", postId)
       .order("created_at", { ascending: false });
     if (error) {
@@ -45,18 +57,26 @@ export function CommentSection({ postId, currentUserName }: CommentSectionProps)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !user) return;
     setLoading(true);
-    const author_name = currentUserName ?? "Anonymous";
+    
     const { data, error } = await supabase
       .from("comments")
       .insert({
         post_id: postId,
-        author_name,
+        user_id: user.id,
         content: newComment.trim(),
       })
-      .select()
+      .select(`
+        *,
+        profiles!user_id (
+          name,
+          username,
+          avatar
+        )
+      `)
       .single();
+
     if (error) {
       toast({ title: "Failed to add comment", description: error.message, variant: "destructive" });
       setLoading(false);
@@ -68,28 +88,32 @@ export function CommentSection({ postId, currentUserName }: CommentSectionProps)
   }
 
   return (
-    <div className="bg-gray-50 rounded-xl p-4 mt-2">
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
-          placeholder="Write a comment…"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Write a comment..."
           disabled={loading}
-          className="flex-1"
         />
-        <Button type="submit" disabled={loading || !newComment.trim()}>Post</Button>
+        <Button type="submit" disabled={loading}>
+          Post
+        </Button>
       </form>
-      <div className="space-y-2 max-h-52 overflow-y-auto">
-        {loading && comments.length === 0 && <div className="text-next12-gray text-sm">Loading comments…</div>}
-        {!loading && comments.length === 0 && <div className="text-next12-gray text-sm">No comments yet.</div>}
-        {comments.map(comment => (
-          <div key={comment.id} className="p-2 bg-white rounded shadow-sm">
-            <div className="text-xs text-next12-gray flex gap-2 items-center">
-              <span className="font-semibold text-next12-dark">{comment.author_name}</span>
-              <span className="opacity-60">•</span>
-              <span>{new Date(comment.created_at).toLocaleString()}</span>
+      <div className="space-y-4">
+        {comments.map((comment) => (
+          <div key={comment.id} className="flex gap-2">
+            {comment.profiles.avatar && (
+              <img
+                src={comment.profiles.avatar}
+                alt={comment.profiles.name}
+                className="w-8 h-8 rounded-full"
+              />
+            )}
+            <div>
+              <div className="font-medium">{comment.profiles.name}</div>
+              <div>{comment.content}</div>
             </div>
-            <div className="text-sm mt-1">{comment.content}</div>
           </div>
         ))}
       </div>

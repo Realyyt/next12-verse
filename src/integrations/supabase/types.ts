@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       comments: {
@@ -16,6 +41,8 @@ export type Database = {
           created_at: string
           id: string
           post_id: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
           author_name: string
@@ -23,6 +50,8 @@ export type Database = {
           created_at?: string
           id?: string
           post_id: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
           author_name?: string
@@ -30,32 +59,196 @@ export type Database = {
           created_at?: string
           id?: string
           post_id?: string
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       connections: {
         Row: {
           created_at: string
           friend_id: string
           id: string
-          status: string
+          status: Database["public"]["Enums"]["connection_status"]
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           friend_id: string
           id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["connection_status"]
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           friend_id?: string
           id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["connection_status"]
+          updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "connections_friend_id_fkey"
+            columns: ["friend_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_registrations: {
+        Row: {
+          additional_notes: string | null
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          dietary_restrictions: string | null
+          email: string
+          event_id: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          status: Database["public"]["Enums"]["registration_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          dietary_restrictions?: string | null
+          email: string
+          event_id: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["registration_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          additional_notes?: string | null
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          dietary_restrictions?: string | null
+          email?: string
+          event_id?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["registration_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registrations_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string
+          date: string
+          description: string | null
+          id: string
+          image_url: string | null
+          location: string
+          max_attendees: number | null
+          status: Database["public"]["Enums"]["event_status"]
+          time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          date: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location: string
+          max_attendees?: number | null
+          status?: Database["public"]["Enums"]["event_status"]
+          time: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          date?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string
+          max_attendees?: number | null
+          status?: Database["public"]["Enums"]["event_status"]
+          time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -79,64 +272,144 @@ export type Database = {
           receiver_id?: string
           sender_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_post_likes_post"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_post_likes_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {
+          comments_count: number | null
           content: string | null
-          created_at: string | null
-          event_name: string
+          created_at: string
           id: string
           image_url: string | null
-          location: string | null
+          likes_count: number | null
+          updated_at: string
           user_id: string
         }
         Insert: {
+          comments_count?: number | null
           content?: string | null
-          created_at?: string | null
-          event_name: string
+          created_at?: string
           id?: string
           image_url?: string | null
-          location?: string | null
+          likes_count?: number | null
+          updated_at?: string
           user_id: string
         }
         Update: {
+          comments_count?: number | null
           content?: string | null
-          created_at?: string | null
-          event_name?: string
+          created_at?: string
           id?: string
           image_url?: string | null
-          location?: string | null
+          likes_count?: number | null
+          updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
+          admin_notes: string | null
           avatar: string | null
           bio: string | null
+          cover_photo: string | null
+          created_at: string
           id: string
+          is_admin: boolean | null
+          is_banned: boolean | null
           is_verified: boolean | null
           location: string | null
           name: string
+          updated_at: string
           username: string
         }
         Insert: {
+          admin_notes?: string | null
           avatar?: string | null
           bio?: string | null
+          cover_photo?: string | null
+          created_at?: string
           id: string
+          is_admin?: boolean | null
+          is_banned?: boolean | null
           is_verified?: boolean | null
           location?: string | null
           name: string
+          updated_at?: string
           username: string
         }
         Update: {
+          admin_notes?: string | null
           avatar?: string | null
           bio?: string | null
+          cover_photo?: string | null
+          created_at?: string
           id?: string
+          is_admin?: boolean | null
+          is_banned?: boolean | null
           is_verified?: boolean | null
           location?: string | null
           name?: string
+          updated_at?: string
           username?: string
         }
         Relationships: []
@@ -149,7 +422,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      connection_status: "pending" | "accepted" | "rejected"
+      event_status: "draft" | "published" | "cancelled" | "completed"
+      registration_status: "pending" | "confirmed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -263,7 +538,15 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  public: {
+  graphql_public: {
     Enums: {},
   },
+  public: {
+    Enums: {
+      connection_status: ["pending", "accepted", "rejected"],
+      event_status: ["draft", "published", "cancelled", "completed"],
+      registration_status: ["pending", "confirmed", "cancelled"],
+    },
+  },
 } as const
+

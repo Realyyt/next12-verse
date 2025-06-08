@@ -4,6 +4,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { CommentSection } from "./comment-section";
+import { toggleLike, sharePost } from "@/lib/posts";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { useToast } from "@/hooks/use-toast";
 
 interface PostCardProps {
   id: string;
@@ -22,6 +25,10 @@ interface PostCardProps {
   className?: string;
   canComment?: boolean;
   currentUserName?: string | null;
+  liked?: boolean;
+  onLikeToggle?: () => void;
+  onComment?: () => void;
+  onShare?: () => void;
 }
 
 export function PostCard({
@@ -35,25 +42,69 @@ export function PostCard({
   className,
   canComment,
   currentUserName,
+  liked: initialLiked = false,
+  onLikeToggle,
+  onComment,
+  onShare,
 }: PostCardProps) {
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(initialLikes);
   const [shareOpen, setShareOpen] = useState(false);
+  const { user } = useAuthUser();
+  const { toast } = useToast();
   const postUrl = `${window.location.origin}/?post=${id}`;
 
-  const handleLike = () => {
-    if (liked) {
-      setLikes(likes - 1);
-    } else {
-      setLikes(likes + 1);
+  const handleLike = async () => {
+    if (!user) {
+      toast({ title: "Please sign in to like posts", variant: "destructive" });
+      return;
     }
-    setLiked(!liked);
+
+    try {
+      const { liked: newLiked } = await toggleLike(id, user.id);
+      setLiked(newLiked);
+      setLikes(prev => newLiked ? prev + 1 : prev - 1);
+      onLikeToggle?.();
+    } catch (error) {
+      toast({ title: "Failed to update like", description: "Please try again", variant: "destructive" });
+    }
   };
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(postUrl);
-    alert("Copied post link!"); // (Optional: replace with toast)
+    toast({ title: "Copied post link!" });
     setShareOpen(false);
+  };
+
+  const handleShare = async () => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to share posts',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await sharePost(id, user.id);
+      onShare?.();
+      toast({
+        title: 'Success',
+        description: 'Post shared successfully',
+      });
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to share post',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleComment = () => {
+    onComment?.();
   };
 
   const fbShare = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
@@ -110,56 +161,92 @@ export function PostCard({
           </div>
         )}
         
-        <div className="flex justify-between items-center pt-2 border-t border-gray-100 gap-2 flex-wrap">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+        <div className="flex items-center gap-4 text-next12-gray">
+          <Button
+            variant="ghost"
+            size="sm"
             className={cn(
-              "flex items-center gap-1", 
-              liked ? "text-next12-orange" : "text-next12-gray"
+              "flex items-center gap-1 hover:text-next12-orange",
+              liked && "text-next12-orange"
             )}
             onClick={handleLike}
-            aria-label={liked ? "Unlike post" : "Like post"}
           >
-            <Heart fill={liked ? "#fe5b3e" : "none"} className="h-5 w-5 transition-colors" />
+            <Heart className={cn("h-4 w-4", liked && "fill-current")} />
             <span>{likes}</span>
           </Button>
-          
+
+          {canComment && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1 hover:text-next12-orange"
+              onClick={handleComment}
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>{comments}</span>
+            </Button>
+          )}
+
           <Popover open={shareOpen} onOpenChange={setShareOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center gap-1 text-next12-gray">
-                <Share className="h-5 w-5" />
-                <span>Share</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1 hover:text-next12-orange"
+                onClick={handleShare}
+              >
+                <Share className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64">
-              <div className="flex flex-col gap-2">
-                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={handleCopyLink}>
-                  <CopyIcon className="w-4 h-4" />
-                  <span>Copy link</span>
+            <PopoverContent className="w-48 p-2">
+              <div className="grid gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={handleCopyLink}
+                >
+                  <CopyIcon className="h-4 w-4 mr-2" />
+                  Copy Link
                 </Button>
-                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(fbShare)}>
-                  <Facebook className="w-4 h-4 text-blue-600" />
-                  <span>Share to Facebook</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => openSocialShare(fbShare)}
+                >
+                  <Facebook className="h-4 w-4 mr-2" />
+                  Facebook
                 </Button>
-                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(twitterShare)}>
-                  <Twitter className="w-4 h-4 text-[#1da1f2]" />
-                  <span>Share to Twitter</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => openSocialShare(twitterShare)}
+                >
+                  <Twitter className="h-4 w-4 mr-2" />
+                  Twitter
                 </Button>
-                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(linkedinShare)}>
-                  <Linkedin className="w-4 h-4 text-[#0a66c2]" />
-                  <span>Share to LinkedIn</span>
-                </Button>
-                <Button variant="outline" size="sm" className="flex w-full gap-2 items-center" onClick={() => openSocialShare(whatsappShare)}>
-                  <MessageCircle className="w-4 h-4 text-green-500" />
-                  <span>Share to WhatsApp</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => openSocialShare(linkedinShare)}
+                >
+                  <Linkedin className="h-4 w-4 mr-2" />
+                  LinkedIn
                 </Button>
               </div>
             </PopoverContent>
           </Popover>
         </div>
         {canComment && (
-          <CommentSection postId={id} currentUserName={currentUserName ?? null} />
+          <div className="mt-4">
+            <CommentSection
+              postId={id}
+              currentUserName={currentUserName}
+            />
+          </div>
         )}
       </div>
     </div>
