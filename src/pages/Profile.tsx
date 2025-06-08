@@ -273,7 +273,7 @@ const Profile = () => {
         size: avatarFileToUse.size,
         type: avatarFileToUse.type,
         userId: user.id,
-        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+        supabaseUrl: import.meta.env.SUPABASE_URL,
         hasSession: !!session
       });
 
@@ -401,7 +401,7 @@ const Profile = () => {
         size: file.size,
         type: file.type,
         userId: user.id,
-        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+        supabaseUrl: import.meta.env.SUPABASE_URL,
         hasSession: !!session
       });
 
